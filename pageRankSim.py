@@ -14,12 +14,55 @@ import Testing_Unitaries
 
 # %% codecell
 
+def connected_node_mask(A):
+    node_mask = [] # true for connected nodes, false for disconnected nodes
+    for i in range(A.shape[0]):
+        if False not in np.equal( A[i,:], np.zeros(A.shape[0]) ) and False not in np.equal( A[:,i], np.zeros(A.shape[0]) ):
+            node_mask.append(False)
+        else:
+            node_mask.append(True)
+    return node_mask
+
+def beginsim (A, n_frames):
+    n_runs = n_frames # number of runs in final iteration
+    shots = 50 # number of shots on IBM qasm simulator
+    # for graph node 8 disconnected : index = 7
+    disc_indices = []
+
+    for i in range(len(A[1,:])):
+        if(not connected_node_mask(A)[i]):
+            disc_indices.append(i)
+
+    nqubits=int(np.log2(A.shape[0]))
+    disc_indices2 = np.zeros(len(disc_indices))
+    # Using indices from disconnected vertices to decide complementary indices from
+    # left-concatenating 1 to the binary number
+    for i in range(len(disc_indices)):
+        disc_indices2[i]=disc_indices[i] + 2**nqubits
+
+    n_states = 2**nqubits - len(disc_indices)
+    initsize = A.shape[0]*2
+    init_vector = np.ones(initsize)/np.sqrt(initsize-2*len(disc_indices))
+        # making parts of init vector =0
+    for i in range(len(disc_indices)):
+        init_vector[int(disc_indices[i])] = 0
+        init_vector[int(disc_indices2[i])] = 0
+
+    # initialize to superposition without |up>|111> or |down>|111>
+    rankmatrix=np.zeros((n_frames,n_states))
+
+    for i in range(1,n_frames+1,1):
+        rankrow = simulate(A,init_vector,int((n_runs/n_frames)*i),shots,n_states)
+        rankmatrix[i-1,:]=rankrow
+
+    return(rankmatrix)
 
     # %% codecell
     # run circuit
 
     # initialize to superposition without |up>|111> or |down>|111>
-def simulate(A, init_vector, n_runs, shots):
+    
+def simulate(A, init_vector, n_runs, shots, n_states):
 
     # number of qubits needed for graph
     n_qubits = int(np.log2(A.shape[0]))
@@ -40,7 +83,12 @@ def simulate(A, init_vector, n_runs, shots):
 
     runs = [10*i + 50 for i in range(n_runs)]
     # all the probabilities are added up here to yield the quantum rank
-    rank = {'000':0,'001':0,'010':0,'011':0,'100':0,'101':0,'110':0}
+
+    # creates as many dictionary slots as we need
+    rank = {}
+    for i in range(n_states):
+        rank[bin(i)[2:].zfill(n_qubits)] = 0
+
     for run in runs:
 
         # initialize qc
