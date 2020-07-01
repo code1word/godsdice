@@ -6,3 +6,8 @@ __pycache__/
 .ipynb_checkpoints/
 
 .vscode/
+<<<<<<< HEAD
+=======
+
+*.mp4
+>>>>>>> 4efaec94481b3eef83e7e048a3b77a8c41662f63
